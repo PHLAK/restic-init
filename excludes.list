@@ -1,0 +1,57 @@
+# System Directories
+########################################
+
+/bin
+/boot
+/dev
+/media
+/mnt
+/proc
+/run
+/snap
+/sys
+/tmp
+/usr/bin
+/var/lib/docker
+/var/log
+/var/tmp
+
+# User Files
+########################################
+
+/home/*/.adobe
+/home/*/.cache
+/home/*/.composer
+/home/*/.dbus
+/home/*/Downloads
+/home/*/.fontconfig
+/home/*/.npm
+/home/*/.steam
+/home/*/.thumbnails
+/home/*/snap
+/home/*/Steam
+
+# Disk Images
+########################################
+
+*.iso
+*.qemu
+*.qemu2
+*.vbox
+*.vmdk
+
+# Cache Files
+########################################
+
+.apm/_cacache
+.mozilla/firefox/**/cache
+/**/cache
+/**/Cache
+/**/CACHE
+*.cache
+
+# Development Files
+########################################
+
+/**/node_modules
+/**/vendor
