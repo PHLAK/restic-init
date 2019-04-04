@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -o errexit -o pipefail
 
-# Request root priveleges
 echo "> Requesting root privileges"
-
 if [[ $(sudo whoami) != "root" ]]; then
     echo "ERROR: This script requires root priveleges to run"
     exit 0
@@ -71,12 +69,10 @@ function configureRestic() {
         read -s -p "Repository password: " RESTIC_PASSWORD; echo
     done
 
-    # EXAMPLE: 0123456789abcba9876543210
     while [[ ! ${B2_ACCOUNT_ID} =~ [0-9a-f]{25} ]]; do
         read -p "B2 Account ID: " B2_ACCOUNT_ID
     done
 
-    # EXAMPLE: IrF6T0POw6fozjAOKWZ8gcH6vRmygdR
     while [[ ! ${B2_ACCOUNT_KEY} =~ .{31} ]]; do
         read -p "B2 Account Key: " B2_ACCOUNT_KEY
     done
