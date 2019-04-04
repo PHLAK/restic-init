@@ -85,7 +85,7 @@ function configureRestic() {
     echo "" | sudo tee ${CONFIG_FILE} > /dev/null
     echo "export RESTIC_REPOSITORY=\"b2:${RESTIC_REPOSITORY}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
     echo "export RESTIC_PASSWORD=\"${RESTIC_PASSWORD}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
-    echo "export B2_ACCOUNT_ID=\" ${B2_ACCOUNT_ID}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
+    echo "export B2_ACCOUNT_ID=\"${B2_ACCOUNT_ID}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
     echo "export B2_ACCOUNT_KEY=\"${B2_ACCOUNT_KEY}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
     echo "DONE"
 }
