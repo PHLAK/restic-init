@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -o errexit -o pipefail
+
+# Load config
+source /etc/restic/config
+
+# Run backup
+restic backup \
+    --option b2.connections=10 \
+    --exclude-caches \
+    --exclude-file /etc/restic/excludes.list \
+    /home /etc
+
+# Prune old backups
+restic forget --prune --host "${HOSTNAME}" \
+    --keep-last 3 \
+    --keep-hourly 24 \
+    --keep-daily 7 \
+    --keep-weekly 4 \
+    --keep-monthly 12 \
+    --keep-yearly 1

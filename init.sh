@@ -6,8 +6,13 @@ echo "> Requesting root privileges"
 
 if [[ $(sudo whoami) != "root" ]]; then
     echo "ERROR: This script requires root priveleges to run"
-    exit
+    exit 0
 fi
+
+## GLOBAL VARIABLES
+########################################
+
+RESTIC_CONFIG_DIRECTORY="/etc/restic"
 
 ## SCRIPT FUNCTIONS
 ########################################
@@ -36,58 +41,90 @@ function installManFiles() {
 }
 
 function configureRestic() {
-    # local CONFIG_FILE="/etc/restic/config"
-    local CONFIG_FILE="/tmp/restic/config"
-    local RESTIC_REPOSITORY
-    local RESTIC_PASSWORD
-    local B2_ACCOUNT_ID
-    local B2_ACCOUNT_KEY
+    local CONFIG_FILE="${RESTIC_CONFIG_DIRECTORY}/config"
+
+    if [[ ! -d ${RESTIC_CONFIG_DIRECTORY} ]]; then
+        echo "> Creating restic config directory at ${RESTIC_CONFIG_DIRECTORY}"
+        sudo mkdir ${RESTIC_CONFIG_DIRECTORY}
+    fi
+
+    echo "> Gathering configuration data from user"
 
     if [[ -f ${CONFIG_FILE} ]]; then
         while [[ ! ${OVERWRITE_CONFIG_FILE} =~ [nyNY] ]]; do
-            echo -n "Configuration file already exists, overwrite? [Y|N]: "
+            echo -n "Configuration file already exists, overwrite? [y|n]: "
             read OVERWRITE_CONFIG_FILE
         done
 
         if [[ ! ${OVERWRITE_CONFIG_FILE} =~ [Yy] ]]; then
-            echo "> Keeping previously created confuration file"
+            echo "> Keeping previously created confuration file ${CONFIG_FILE}"
             return 0
         fi
     fi
 
     while [[ ! ${RESTIC_REPOSITORY} =~ [a-zA-Z_-]+ ]]; do
-        echo -n "Repository name: "
-        read RESTIC_REPOSITORY
+        read -p "Repository name: " RESTIC_REPOSITORY
     done
 
-    while [[ ! ${RESTIC_PASSWORD} =~ .+ ]]; do
-        echo -n "Repository password: "
-        read -s RESTIC_PASSWORD
-        echo
+    echo "NOTE: Password must be at least 10 characters"
+    while [[ ! ${RESTIC_PASSWORD} =~ .{10,} ]]; do
+        read -s -p "Repository password: " RESTIC_PASSWORD; echo
     done
 
+    # EXAMPLE: 0123456789abcba9876543210
     while [[ ! ${B2_ACCOUNT_ID} =~ [0-9a-f]{25} ]]; do
-        echo -n "B2 Account ID: "
-        read B2_ACCOUNT_ID
+        read -p "B2 Account ID: " B2_ACCOUNT_ID
     done
 
-    # K001uumlLait+YHbwTpXyp3W+dj3QFo
-    while [[ ! ${B2_ACCOUNT_KEY} =~ .{30,} ]]; do
-        echo -n "B2 Account Key: "
-        read B2_ACCOUNT_KEY
+    # EXAMPLE: IrF6T0POw6fozjAOKWZ8gcH6vRmygdR
+    while [[ ! ${B2_ACCOUNT_KEY} =~ .{31} ]]; do
+        read -p "B2 Account Key: " B2_ACCOUNT_KEY
     done
 
-    echo -n "> Writing config file ... "
-    echo "" > ${CONFIG_FILE}
-    echo "export RESTIC_REPOSITORY=\"b2:${RESTIC_REPOSITORY}\"" >> ${CONFIG_FILE}
-    echo "export RESTIC_PASSWORD=\"${RESTIC_PASSWORD}\"" >> ${CONFIG_FILE}
-    echo "export B2_ACCOUNT_ID=\" ${B2_ACCOUNT_ID}\"" >> ${CONFIG_FILE}
-    echo "export B2_ACCOUNT_KEY=\"${B2_ACCOUNT_KEY}\"" >> ${CONFIG_FILE}
+    echo -n "> Writing config file ${CONFIG_FILE} ... "
+    echo "" | sudo tee ${CONFIG_FILE} > /dev/null
+    echo "export RESTIC_REPOSITORY=\"b2:${RESTIC_REPOSITORY}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
+    echo "export RESTIC_PASSWORD=\"${RESTIC_PASSWORD}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
+    echo "export B2_ACCOUNT_ID=\" ${B2_ACCOUNT_ID}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
+    echo "export B2_ACCOUNT_KEY=\"${B2_ACCOUNT_KEY}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
+    echo "DONE"
+}
+
+function installExcludesList() {
+    local EXCLUDES_LIST="${RESTIC_CONFIG_DIRECTORY}/excludes.list"
+
+    if [[ -f ${EXCLUDES_LIST} ]]; then
+        while [[ ! ${OVERWRITE_EXCLUDES_LIST} =~ [nyNY] ]]; do
+            read -p "Excludes file already exists, overwrite? [y|n]: " OVERWRITE_EXCLUDES_LIST
+        done
+
+        if [[ ! ${OVERWRITE_EXCLUDES_LIST} =~ [Yy] ]]; then
+            echo "> Keeping previously created excludes file ${EXCLUDES_LIST}"
+            return 0
+        fi
+    fi
+
+    echo -n "> Creating excludes list at ${EXCLUDES_LIST} ... "
+    sudo install --owner root resources/excludes.list ${EXCLUDES_LIST}
     echo "DONE"
 }
 
 function createCronJob() {
+    local CRON_FILE="/etc/cron.hourly/restic-backup"
+
+    if [[ -f ${CRON_FILE} ]]; then
+        while [[ ! ${OVERWRITE_CRON_FILE} =~ [nyNY] ]]; do
+            read -p "Cron file already exists, overwrite? [y|n]: " OVERWRITE_CRON_FILE
+        done
+
+        if [[ ! ${OVERWRITE_CRON_FILE} =~ [Yy] ]]; then
+            echo "> Keeping previously created cron file ${CRON_FILE}"
+            return 0
+        fi
+    fi
+
     echo -n "> Creating hourly cronjob ... "
+    sudo install --owner root resources/restic-backup ${CRON_FILE}
     echo "DONE"
 }
 
@@ -98,4 +135,5 @@ installResticBinary \
     && installBashCompletion \
     && installManFiles \
     && configureRestic \
+    && installExcludesList \
     && createCronJob
