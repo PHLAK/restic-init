@@ -10,6 +10,7 @@ fi
 ## GLOBAL VARIABLES
 ########################################
 
+RESTIC_BIN="/usr/local/bin/restic"
 RESTIC_CONFIG_DIRECTORY="/etc/restic"
 
 ## SCRIPT FUNCTIONS
@@ -22,13 +23,26 @@ function installResticBinary() {
 
     if [[ ! $(command -v restic) ]]; then
         curl --silent --location ${ARCHIVE_URL} | bzip2 --decompress \
-            | sudo tee /usr/bin/restic > /dev/null && sudo chmod +x /usr/bin/restic
+            | sudo tee ${RESTIC_BIN} > /dev/null && sudo chmod +x  ${RESTIC_BIN}
     fi
 
     echo "DONE"
 }
 
 function installBashCompletion() {
+    local BASH_COMPLETION_FILE="/etc/bash_completion.d/restic"
+
+    if [[ -f ${BASH_COMPLETION_FILE} ]]; then
+        while [[ ! ${OVERWRITE_BASH_COMPLETION_FILE} =~ [nyNY] ]]; do
+            read -p "Bash completion file already exists, overwrite? [y|n]: " OVERWRITE_BASH_COMPLETION_FILE
+        done
+
+        if [[ ! ${OVERWRITE_BASH_COMPLETION_FILE} =~ [Yy] ]]; then
+            echo "> Keeping previously created bash completion file ${BASH_COMPLETION_FILE}"
+            return 0
+        fi
+    fi
+
     echo -n "> "
     sudo restic generate --bash-completion /etc/bash_completion.d/restic
 }
@@ -50,8 +64,7 @@ function configureRestic() {
 
     if [[ -f ${CONFIG_FILE} ]]; then
         while [[ ! ${OVERWRITE_CONFIG_FILE} =~ [nyNY] ]]; do
-            echo -n "Configuration file already exists, overwrite? [y|n]: "
-            read OVERWRITE_CONFIG_FILE
+            read -p "Configuration file already exists, overwrite? [y|n]: " OVERWRITE_CONFIG_FILE
         done
 
         if [[ ! ${OVERWRITE_CONFIG_FILE} =~ [Yy] ]]; then
@@ -79,6 +92,7 @@ function configureRestic() {
 
     echo -n "> Writing config file ${CONFIG_FILE} ... "
     echo "" | sudo tee ${CONFIG_FILE} > /dev/null
+    echo "export RESTIC_BIN=\"${RESTIC_BIN}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
     echo "export RESTIC_REPOSITORY=\"b2:${RESTIC_REPOSITORY}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
     echo "export RESTIC_PASSWORD=\"${RESTIC_PASSWORD}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
     echo "export B2_ACCOUNT_ID=\"${B2_ACCOUNT_ID}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
@@ -91,11 +105,11 @@ function installExcludesList() {
 
     if [[ -f ${EXCLUDES_LIST} ]]; then
         while [[ ! ${OVERWRITE_EXCLUDES_LIST} =~ [nyNY] ]]; do
-            read -p "Excludes file already exists, overwrite? [y|n]: " OVERWRITE_EXCLUDES_LIST
+            read -p "Excludes list already exists, overwrite? [y|n]: " OVERWRITE_EXCLUDES_LIST
         done
 
         if [[ ! ${OVERWRITE_EXCLUDES_LIST} =~ [Yy] ]]; then
-            echo "> Keeping previously created excludes file ${EXCLUDES_LIST}"
+            echo "> Keeping previously created excludes list ${EXCLUDES_LIST}"
             return 0
         fi
     fi
@@ -119,7 +133,7 @@ function createCronJob() {
         fi
     fi
 
-    echo -n "> Creating hourly cronjob ... "
+    echo -n "> Creating hourly cronjob at ${CRON_FILE} ... "
     sudo install --owner root resources/restic-backup ${CRON_FILE}
     echo "DONE"
 }
