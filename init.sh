@@ -11,6 +11,7 @@ fi
 ########################################
 
 RESTIC_BIN="/usr/local/bin/restic"
+RESTIC_GROUP="restic"
 RESTIC_CONFIG_DIRECTORY="/etc/restic"
 
 ## SCRIPT FUNCTIONS
@@ -52,6 +53,15 @@ function installManFiles() {
     sudo restic generate --man /usr/share/man/man1/
 }
 
+function createResticGroup() {
+    if [[ $(getent group ${RESTIC_GROUP}) ]]; then
+        echo "> Group '${RESTIC_GROUP}' already exists"
+        return 0
+    fi
+
+    sudo addgroup ${RESTIC_GROUP}
+}
+
 function configureRestic() {
     local CONFIG_FILE="${RESTIC_CONFIG_DIRECTORY}/config"
 
@@ -91,12 +101,13 @@ function configureRestic() {
     done
 
     echo -n "> Writing config file ${CONFIG_FILE} ... "
-    echo "" | sudo tee ${CONFIG_FILE} > /dev/null
-    echo "export RESTIC_BIN=\"${RESTIC_BIN}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
-    echo "export RESTIC_REPOSITORY=\"b2:${RESTIC_REPOSITORY}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
-    echo "export RESTIC_PASSWORD=\"${RESTIC_PASSWORD}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
-    echo "export B2_ACCOUNT_ID=\"${B2_ACCOUNT_ID}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
-    echo "export B2_ACCOUNT_KEY=\"${B2_ACCOUNT_KEY}\"" | sudo tee -a ${CONFIG_FILE} > /dev/null
+    cat resources/config \
+        | sed "s|{{ RESTIC_BIN }}|${RESTIC_BIN}|" \
+        | sed "s|{{ RESTIC_REPOSITORY }}|${RESTIC_REPOSITORY}|" \
+        | sed "s|{{ RESTIC_PASSWORD }}|${RESTIC_PASSWORD}|" \
+        | sed "s|{{ B2_ACCOUNT_ID }}|${B2_ACCOUNT_ID}|" \
+        | sed "s|{{ B2_ACCOUNT_KEY }}|${B2_ACCOUNT_KEY}|" \
+        | sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+r /dev/stdin ${CONFIG_FILE}
     echo "DONE"
 }
 
@@ -115,7 +126,7 @@ function installExcludesList() {
     fi
 
     echo -n "> Creating excludes list at ${EXCLUDES_LIST} ... "
-    sudo install --owner root resources/excludes.list ${EXCLUDES_LIST}
+    sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+r resources/excludes.list ${EXCLUDES_LIST}
     echo "DONE"
 }
 
@@ -134,7 +145,7 @@ function createCronJob() {
     fi
 
     echo -n "> Creating hourly cronjob at ${CRON_FILE} ... "
-    sudo install --owner root resources/restic-backup ${CRON_FILE}
+    sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+rx,o+x resources/restic-backup ${CRON_FILE}
     echo "DONE"
 }
 
@@ -144,6 +155,7 @@ function createCronJob() {
 installResticBinary \
     && installBashCompletion \
     && installManFiles \
+    && createResticGroup \
     && configureRestic \
     && installExcludesList \
     && createCronJob
