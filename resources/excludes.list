@@ -48,6 +48,7 @@
 /**/cache
 /**/Cache
 /**/CACHE
+/**/CachedData
 *.cache
 
 # Development Files
