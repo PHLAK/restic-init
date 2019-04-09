@@ -138,6 +138,25 @@ function configureRestic() {
     echo "DONE"
 }
 
+function installIncludesList() {
+    local INCLUDES_LIST="${RESTIC_CONFIG_DIRECTORY}/includes.list"
+
+    if [[ -f ${INCLUDES_LIST} ]]; then
+        while [[ ! ${OVERWRITE_INCLUDES_LIST} =~ [nyNY] ]]; do
+            read -p "Includes list already exists, overwrite? [y|n]: " OVERWRITE_INCLUDES_LIST
+        done
+
+        if [[ ! ${OVERWRITE_INCLUDES_LIST} =~ [Yy] ]]; then
+            echo "> Keeping previously created includes list ${INCLUDES_LIST}"
+            return 0
+        fi
+    fi
+
+    echo -n "> Creating includes list at ${INCLUDES_LIST} ... "
+    sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+r resources/includes.list ${INCLUDES_LIST}
+    echo "DONE"
+}
+
 function installExcludesList() {
     local EXCLUDES_LIST="${RESTIC_CONFIG_DIRECTORY}/excludes.list"
 
@@ -184,5 +203,6 @@ installResticBinary \
     && installManFiles \
     && createResticGroup \
     && configureRestic \
+    && installIncludesList \
     && installExcludesList \
     && createCronJob
