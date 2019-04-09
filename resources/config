@@ -1,5 +1,32 @@
-export RESTIC_BIN="{{ RESTIC_BIN }}"
-export RESTIC_REPOSITORY="b2:{{ RESTIC_REPOSITORY }}"
-export RESTIC_PASSWORD="{{ RESTIC_PASSWORD }}"
-export B2_ACCOUNT_ID="{{ B2_ACCOUNT_ID }}"
-export B2_ACCOUNT_KEY="{{ B2_ACCOUNT_KEY }}"
+# The path to your installed restic binary
+RESTIC_BIN="{{ RESTIC_BIN }}"
+
+# Repository in which which backups will be stored
+RESTIC_REPOSITORY="b2:{{ RESTIC_REPOSITORY }}"
+
+# The repository encryption password
+RESTIC_PASSWORD="{{ RESTIC_PASSWORD }}"
+
+# Your Backblaze B2 account ID
+B2_ACCOUNT_ID="{{ B2_ACCOUNT_ID }}"
+
+# Your Backblaze B2 account key
+B2_ACCOUNT_KEY="{{ B2_ACCOUNT_KEY }}"
+
+# The number of most recent backups to retain
+KEEP_LAST="3"
+
+# The number of hourly backups to retain
+KEEP_HOURLY="{{ KEEP_HOURLY }}"
+
+# The number of daily backups to retain
+KEEP_DAILY="{{ KEEP_DAILY }}"
+
+# The number of weekly backups to retain
+KEEP_WEEKLY="{{ KEEP_WEEKLY }}"
+
+# The number of monthly backups to retain
+KEEP_MONTHLY="{{ KEEP_MONTHLY }}"
+
+# The number of yearly backups to retain
+KEEP_YEARLY="{{ KEEP_YEARLY }}"

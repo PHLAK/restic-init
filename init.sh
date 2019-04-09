@@ -100,6 +100,28 @@ function configureRestic() {
         read -p "B2 Account Key: " B2_ACCOUNT_KEY
     done
 
+    echo "> Gathering backup retention data from user"
+
+    while [[ ! ${KEEP_HOURLY} =~ [0-9]+ ]]; do
+        read -p "Hourly backups (default: 24): " KEEP_HOURLY
+    done
+
+    while [[ ! ${KEEP_DAILY} =~ [0-9]+ ]]; do
+        read -p "Daily backups (default: 7): " KEEP_DAILY
+    done
+
+    while [[ ! ${KEEP_WEEKLY} =~ [0-9]+ ]]; do
+        read -p "Weekly backups (default: 4): " KEEP_WEEKLY
+    done
+
+    while [[ ! ${KEEP_MONTHLY} =~ [0-9]+ ]]; do
+        read -p "Monthly backups (default: 12): " KEEP_MONTHLY
+    done
+
+    while [[ ! ${KEEP_YEARLY} =~ [0-9]+ ]]; do
+        read -p "Yearly backups (default: 1): " KEEP_YEARLY
+    done
+
     echo -n "> Writing config file ${CONFIG_FILE} ... "
     cat resources/config \
         | sed "s|{{ RESTIC_BIN }}|${RESTIC_BIN}|" \
@@ -107,6 +129,11 @@ function configureRestic() {
         | sed "s|{{ RESTIC_PASSWORD }}|${RESTIC_PASSWORD}|" \
         | sed "s|{{ B2_ACCOUNT_ID }}|${B2_ACCOUNT_ID}|" \
         | sed "s|{{ B2_ACCOUNT_KEY }}|${B2_ACCOUNT_KEY}|" \
+        | sed "s|{{ KEEP_HOURLY }}|${KEEP_HOURLY}|" \
+        | sed "s|{{ KEEP_DAILY }}|${KEEP_DAILY}|" \
+        | sed "s|{{ KEEP_WEEKLY }}|${KEEP_WEEKLY}|" \
+        | sed "s|{{ KEEP_MONTHLY }}|${KEEP_MONTHLY}|" \
+        | sed "s|{{ KEEP_YEARLY }}|${KEEP_YEARLY}|" \
         | sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+r /dev/stdin ${CONFIG_FILE}
     echo "DONE"
 }
