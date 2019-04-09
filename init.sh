@@ -4,7 +4,7 @@ set -o errexit -o pipefail
 echo "> Requesting root privileges"
 if [[ $(sudo whoami) != "root" ]]; then
     echo "ERROR: This script requires root priveleges to run"
-    exit 0
+    exit 1
 fi
 
 ## GLOBAL VARIABLES
