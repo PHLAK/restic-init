@@ -11,7 +11,7 @@ export B2_ACCOUNT_ID="${B2_ACCOUNT_ID}"
 export B2_ACCOUNT_KEY="${B2_ACCOUNT_KEY}"
 
 # Sleep for a random amount of time
-leep $((${RANDOM} % 300))
+sleep $((${RANDOM} % 300))
 
 # Run backup
 ${RESTIC_BIN} backup \
