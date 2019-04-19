@@ -21,12 +21,14 @@ function installResticBinary() {
     local ARCHIVE_URL="https://github.com/restic/restic/releases/download/v0.9.4/restic_0.9.4_linux_amd64.bz2"
 
     echo -n "> Installing restic ... "
-
     if [[ ! $(command -v restic) ]]; then
         curl --silent --location ${ARCHIVE_URL} | bzip2 --decompress \
             | sudo tee ${RESTIC_BIN} > /dev/null && sudo chmod +x  ${RESTIC_BIN}
     fi
+    echo "DONE"
 
+    echo -n "> Checking for newer version ... "
+    sudo restic self-update > /dev/null
     echo "DONE"
 }
 
