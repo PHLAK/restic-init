@@ -18,14 +18,16 @@ RESTIC_CONFIG_DIRECTORY="/etc/restic"
 ########################################
 
 function installResticBinary() {
-    local ARCHIVE_URL="https://github.com/restic/restic/releases/download/v0.9.4/restic_0.9.4_linux_amd64.bz2"
+    local ARCHIVE_URL="https://github.com/restic/restic/releases/download/v0.9.6/restic_0.9.6_linux_amd64.bz2"
 
-    echo -n "> Installing restic ... "
     if [[ ! $(command -v restic) ]]; then
+        echo -n "> Installing restic ... "
         curl --silent --location ${ARCHIVE_URL} | bzip2 --decompress \
             | sudo tee ${RESTIC_BIN} > /dev/null && sudo chmod +x  ${RESTIC_BIN}
+        echo "DONE"
+    else
+        echo "> Restic already installed at $(command -v restic)"
     fi
-    echo "DONE"
 
     echo -n "> Checking for newer version ... "
     sudo restic self-update > /dev/null
@@ -94,13 +96,16 @@ function configureRestic() {
         read -s -p "Repository password: " RESTIC_PASSWORD; echo
     done
 
-    while [[ ! ${B2_ACCOUNT_ID} =~ [0-9a-f]{25} ]]; do
-        read -p "B2 Account ID: " B2_ACCOUNT_ID
-    done
 
-    while [[ ! ${B2_ACCOUNT_KEY} =~ .{31} ]]; do
-        read -p "B2 Account Key: " B2_ACCOUNT_KEY
-    done
+    if [[  ${RESTIC_REPOSITORY} =~ b2:[a-zA-Z_-]+ ]]; then
+        while [[ ! ${B2_ACCOUNT_ID} =~ [0-9a-f]{25} ]]; do
+            read -p "B2 Account ID: " B2_ACCOUNT_ID
+        done
+
+        while [[ ! ${B2_ACCOUNT_KEY} =~ .{31} ]]; do
+            read -p "B2 Account Key: " B2_ACCOUNT_KEY
+        done
+    fi
 
     echo "> Gathering backup retention data from user"
 
