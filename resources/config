@@ -13,20 +13,10 @@ B2_ACCOUNT_ID="{{ B2_ACCOUNT_ID }}"
 # Your Backblaze B2 account key
 B2_ACCOUNT_KEY="{{ B2_ACCOUNT_KEY }}"
 
-# The number of most recent backups to retain
+# Backup retention policy
 KEEP_LAST="3"
-
-# The number of hourly backups to retain
 KEEP_HOURLY="{{ KEEP_HOURLY }}"
-
-# The number of daily backups to retain
 KEEP_DAILY="{{ KEEP_DAILY }}"
-
-# The number of weekly backups to retain
 KEEP_WEEKLY="{{ KEEP_WEEKLY }}"
-
-# The number of monthly backups to retain
 KEEP_MONTHLY="{{ KEEP_MONTHLY }}"
-
-# The number of yearly backups to retain
 KEEP_YEARLY="{{ KEEP_YEARLY }}"
