@@ -20,14 +20,16 @@
 ########################################
 
 /home/*/.adobe
+/home/*/.bash_history
 /home/*/.cache
 /home/*/.composer
 /home/*/.dbus
-/home/*/Downloads
+/home/*/.gem
 /home/*/.fontconfig
 /home/*/.npm
 /home/*/.steam
 /home/*/.thumbnails
+/home/*/Downloads
 /home/*/snap
 /home/*/Steam
 
@@ -49,6 +51,7 @@
 /**/Cache
 /**/CACHE
 /**/CachedData
+/**/GPUCache
 *.cache
 
 # Development Files
