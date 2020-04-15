@@ -13,15 +13,7 @@ export B2_ACCOUNT_KEY="${B2_ACCOUNT_KEY}"
 # Sleep for a random amount of time
 sleep $((${RANDOM} % 300))
 
-# Run backup
-${RESTIC_BIN} backup \
-    --option b2.connections=10 \
-    --files-from /etc/restic/includes.list \
-    --exclude-caches \
-    --exclude-file /etc/restic/excludes.list \
-    --exclude-if-present .restic-ignore
-
-# Prune old backups
+Prune old backups
 ${RESTIC_BIN} forget --prune --host "${HOSTNAME}" \
     --keep-last ${KEEP_LAST} \
     --keep-hourly ${KEEP_HOURLY} \

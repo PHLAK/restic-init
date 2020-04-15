@@ -198,7 +198,7 @@ function createCronJob() {
     fi
 
     echo -n "> Creating hourly cronjob at ${CRON_FILE} ... "
-    sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+rx,o+x resources/restic-backup ${CRON_FILE}
+    sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+rx,o+x resources/scripts/restic-backup ${CRON_FILE}
     echo "DONE"
 }
 
