@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -o errexit -o pipefail
 
-echo "> Requesting root privileges"
-if [[ $(sudo whoami) != "root" ]]; then
-    echo "ERROR: This script requires root priveleges to run"
-    exit 1
-fi
-
 ## GLOBAL VARIABLES
 ########################################
 
@@ -14,17 +8,55 @@ RESTIC_BIN="/usr/local/bin/restic"
 RESTIC_GROUP="restic"
 RESTIC_CONFIG_DIRECTORY="/etc/restic"
 
+## SCRIPT USAGE
+########################################
+
+function usageShort() {
+    echo "Usage: $(basename ${0}) [OPTIONS]"
+}
+
+function usageLong() {
+    usageShort
+
+	cat <<-EOF
+
+	    OPTIONS:
+
+	        -h, --help             Print this help dialogue
+	        -i, --install          Install the Restic binary
+	        -b, --bash-completion  Install bash completion scripts
+	        -m, --man-files        Install Restic man files
+	        -l, --lists            Install includes and excludes lists
+	        -i, --configure        Run interactive configuration
+	        -i, --jobs             Install scheduled jobs
+
+	EOF
+}
+
 ## SCRIPT FUNCTIONS
 ########################################
 
+function requireRoot() {
+    echo "> Requesting root privileges"
+    if [[ $(sudo whoami) != "root" ]]; then
+        echo "ERROR: This script requires root priveleges to run"
+        exit 1
+    fi
+}
+
 function installResticBinary() {
-    local ARCHIVE_URL="https://github.com/restic/restic/releases/download/v0.9.6/restic_0.9.6_linux_amd64.bz2"
+    requireRoot
 
     if [[ ! $(command -v restic) ]]; then
+        local RESTIC_VERSION="$(curl -s https://api.github.com/repos/restic/restic/releases/latest | jq --raw-output '.tag_name')"
+        local ARCHIVE_URL="https://github.com/restic/restic/releases/download/${RESTIC_VERSION}/restic_${RESTIC_VERSION#v}_linux_amd64.bz2"
+
         echo -n "> Installing restic ... "
         curl --silent --location ${ARCHIVE_URL} | bzip2 --decompress \
             | sudo tee ${RESTIC_BIN} > /dev/null && sudo chmod +x  ${RESTIC_BIN}
         echo "DONE"
+
+        return 0
     else
         echo "> Restic already installed at $(command -v restic)"
     fi
@@ -35,6 +67,8 @@ function installResticBinary() {
 }
 
 function installBashCompletion() {
+    requireRoot
+
     local BASH_COMPLETION_FILE="/etc/bash_completion.d/restic"
 
     if [[ -f ${BASH_COMPLETION_FILE} ]]; then
@@ -53,11 +87,15 @@ function installBashCompletion() {
 }
 
 function installManFiles() {
+    requireRoot
+
     echo -n "> "
     sudo restic generate --man /usr/share/man/man1/
 }
 
 function createResticGroup() {
+    requireRoot
+
     if [[ $(getent group ${RESTIC_GROUP}) ]]; then
         echo "> Group '${RESTIC_GROUP}' already exists"
         return 0
@@ -67,6 +105,8 @@ function createResticGroup() {
 }
 
 function configureRestic() {
+    requireRoot
+
     local CONFIG_FILE="${RESTIC_CONFIG_DIRECTORY}/config"
 
     if [[ ! -d ${RESTIC_CONFIG_DIRECTORY} ]]; then
@@ -95,7 +135,6 @@ function configureRestic() {
     while [[ ! ${RESTIC_PASSWORD} =~ .{10,} ]]; do
         read -s -p "Repository password: " RESTIC_PASSWORD; echo
     done
-
 
     if [[  ${RESTIC_REPOSITORY} =~ b2:[a-zA-Z_-]+ ]]; then
         while [[ ! ${B2_ACCOUNT_ID} =~ [0-9a-f]{25} ]]; do
@@ -146,6 +185,8 @@ function configureRestic() {
 }
 
 function installIncludesList() {
+    requireRoot
+
     local INCLUDES_LIST="${RESTIC_CONFIG_DIRECTORY}/includes.list"
 
     if [[ -f ${INCLUDES_LIST} ]]; then
@@ -165,6 +206,8 @@ function installIncludesList() {
 }
 
 function installExcludesList() {
+    requireRoot
+
     local EXCLUDES_LIST="${RESTIC_CONFIG_DIRECTORY}/excludes.list"
 
     if [[ -f ${EXCLUDES_LIST} ]]; then
@@ -183,7 +226,9 @@ function installExcludesList() {
     echo "DONE"
 }
 
-function createCronJob() {
+function createJobs() { # TODO: Convert this to systemd scheduled tasks
+    requireRoot
+
     local CRON_FILE="/etc/cron.hourly/restic-backup"
 
     if [[ -f ${CRON_FILE} ]]; then
@@ -202,6 +247,24 @@ function createCronJob() {
     echo "DONE"
 }
 
+## OPTION / PARAMATER PARSING
+########################################
+
+eval set -- "$(getopt -n "${0}" -o hibmlcj -l "help,install,bash-completion,man-files,lists,configure,jobs" -- "$@")"
+
+while true; do
+    case "${1}" in
+        -h|--help)            usageLong; exit ;;
+        -i|--install)         installResticBinary; exit ;;
+        -b|--bash-completion) installBashCompletion; exit ;;
+        -m|--man-files)       installManFiles; exit ;;
+        -l|--lists)           installIncludesList && installExcludesList; exit ;;
+        -c|--configure)       configureRestic; exit ;;
+        -j|--jobs)            createJobs; exit ;;
+        --)                   shift; break ;;
+    esac
+done
+
 ## MAIN
 ########################################
 
@@ -212,4 +275,4 @@ installResticBinary \
     && configureRestic \
     && installIncludesList \
     && installExcludesList \
-    && createCronJob
+    && createJobs
