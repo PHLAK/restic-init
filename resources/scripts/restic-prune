@@ -10,9 +10,6 @@ export RESTIC_PASSWORD="${RESTIC_PASSWORD}"
 export B2_ACCOUNT_ID="${B2_ACCOUNT_ID}"
 export B2_ACCOUNT_KEY="${B2_ACCOUNT_KEY}"
 
-# Sleep for a random amount of time
-sleep $((${RANDOM} % 300))
-
 # Prune old backups
 ${RESTIC_BIN} forget --prune --host "${HOSTNAME}" \
     --keep-last ${KEEP_LAST} \
