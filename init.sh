@@ -88,8 +88,25 @@ function installBashCompletion() {
 function installManFiles() {
     requireRoot
 
+    local MAN_FILES_PATH="/usr/share/man/man1"
+
+    if [[ $(compgen -G "${MAN_FILES_PATH}/restic*.1") ]]; then
+        while [[ ! ${OVERWRITE_MAN_FILES} =~ [nyNY] ]]; do
+            read -p "Some man files already exist, overwrite? [y|n]: " OVERWRITE_MAN_FILES
+        done
+
+        if [[ ! ${OVERWRITE_MAN_FILES} =~ [Yy] ]]; then
+            echo "> Keeping previously created man files in ${MAN_FILES_PATH}"
+            return 0
+        else
+            echo -n "> Removing existing man files ... "
+            sudo rm ${MAN_FILES_PATH}/restic*.1
+            echo "DONE"
+        fi
+    fi
+
     echo -n "> "
-    sudo restic generate --man /usr/share/man/man1/
+    sudo restic generate --man ${MAN_FILES_PATH}
 }
 
 function createResticGroup() {
