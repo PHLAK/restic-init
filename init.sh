@@ -37,9 +37,8 @@ function usageLong() {
 ########################################
 
 function requireRoot() {
-    echo "> Requesting root privileges"
     if [[ $(sudo whoami) != "root" ]]; then
-        echo "ERROR: This script requires root priveleges to run"
+        echo "ERROR: This action requires root priveleges to run"
         exit 1
     fi
 }
