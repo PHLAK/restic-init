@@ -27,6 +27,7 @@ function usageLong() {
 	        -b, --bash-completion  Install bash completion scripts
 	        -m, --man-files        Install Restic man files
 	        -l, --lists            Install includes and excludes lists
+	        -g, --group            Create the "restic" group
 	        -i, --configure        Run interactive configuration
 	        -i, --jobs             Install scheduled jobs
 
@@ -266,7 +267,7 @@ function createJobs() { # TODO: Convert this to systemd scheduled tasks
 ## OPTION / PARAMATER PARSING
 ########################################
 
-eval set -- "$(getopt -n "${0}" -o hibmlcj -l "help,install,bash-completion,man-files,lists,configure,jobs" -- "$@")"
+eval set -- "$(getopt -n "${0}" -o hibmlgcj -l "help,install,bash-completion,man-files,lists,group,configure,jobs" -- "$@")"
 
 while true; do
     case "${1}" in
@@ -275,6 +276,7 @@ while true; do
         -b|--bash-completion) installBashCompletion; exit ;;
         -m|--man-files)       installManFiles; exit ;;
         -l|--lists)           installIncludesList && installExcludesList; exit ;;
+        -g|--group)           createResticGroup; exit ;;
         -c|--configure)       configureRestic; exit ;;
         -j|--jobs)            createJobs; exit ;;
         --)                   shift; break ;;
