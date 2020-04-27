@@ -1,5 +1,5 @@
-# The path to your installed restic binary
-RESTIC_BIN="{{ RESTIC_BIN }}"
+# Restic cache directory
+RESTIC_CACHE_DIR="${HOME}/.cache/restic"
 
 # Repository in which which backups will be stored
 RESTIC_REPOSITORY="{{ RESTIC_REPOSITORY }}"

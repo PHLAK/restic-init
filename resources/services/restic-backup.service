@@ -1,0 +1,11 @@
+[Unit]
+Description=Run a backup
+# Requisite=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/restic/config
+# ExecStartPre=systemctl is-active restic-local-prune.service | grep -q "^inactive$"
+ExecStartPre=restic unlock
+ExecStart=restic backup --files-from /etc/restic/includes.list --exclude-caches --exclude-file=/etc/restic/excludes.list --exclude-if-present .restic-ignore
+ExecStartPost=restic forget --host "${HOSTNAME}" --keep-last ${KEEP_LAST} --keep-hourly ${KEEP_HOURLY} --keep-daily ${KEEP_DAILY} --keep-weekly ${KEEP_WEEKLY} --keep-monthly ${KEEP_MONTHLY} --keep-yearly ${KEEP_YEARLY}

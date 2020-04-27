@@ -28,8 +28,8 @@ function usageLong() {
 	        -m, --man-files        Install Restic man files
 	        -l, --lists            Install includes and excludes lists
 	        -g, --group            Create the "restic" group
-	        -i, --configure        Run interactive configuration
-	        -i, --jobs             Install scheduled jobs
+	        -c, --configure        Run interactive configuration
+	        -s, --services         Install systemd services and timers
 
 	EOF
 }
@@ -187,7 +187,6 @@ function configureRestic() {
 
     echo -n "> Writing config file ${CONFIG_FILE} ... "
     cat resources/config \
-        | sed "s|{{ RESTIC_BIN }}|${RESTIC_BIN}|" \
         | sed "s|{{ RESTIC_REPOSITORY }}|${RESTIC_REPOSITORY}|" \
         | sed "s|{{ RESTIC_PASSWORD }}|${RESTIC_PASSWORD}|" \
         | sed "s|{{ B2_ACCOUNT_ID }}|${B2_ACCOUNT_ID}|" \
@@ -243,31 +242,54 @@ function installExcludesList() {
     echo "DONE"
 }
 
-function createJobs() { # TODO: Convert this to systemd scheduled tasks
+function createServices() { # TODO: Convert this to systemd services and scheduled tasks
     requireRoot
 
-    local CRON_FILE="/etc/cron.hourly/restic-backup"
+    for FILE in resources/services/*.{service,timer}; do
+        local DESTINATION="/etc/systemd/system/$(basename ${FILE})"
 
-    if [[ -f ${CRON_FILE} ]]; then
-        while [[ ! ${OVERWRITE_CRON_FILE} =~ [nyNY] ]]; do
-            read -p "Cron file already exists, overwrite? [y|n]: " OVERWRITE_CRON_FILE
-        done
+        if [[ -f ${DESTINATION} ]]; then
+            while [[ ! ${OVERWRITE_FILE}  =~ [nyNY] ]]; do
+                read -p "${DESTINATION} already exists, overwrite? [y|n]: " OVERWRITE_FILE
+            done
 
-        if [[ ! ${OVERWRITE_CRON_FILE} =~ [Yy] ]]; then
-            echo "> Keeping previously created cron file ${CRON_FILE}"
-            return 0
+            if [[ ! ${OVERWRITE_FILE} =~ [Yy] ]]; then
+                echo "> Keeping previously created service file ${DESTINATION}"
+                unset OVERWRITE_FILE
+                continue
+            fi
         fi
+
+        echo -n "> Creating service file at ${DESTINATION} ... "
+        sudo install --owner root --group root ${FILE} ${DESTINATION}
+        unset OVERWRITE_FILE
+        echo "DONE"
+    done
+
+    echo -n "> Reloading systemd daemon ... "
+    sudo systemctl daemon-reload
+    echo "DONE"
+
+    while [[ ! ${ENABLE_TIMERS}  =~ [nyNY] ]]; do
+        read -p "Enable backup timers? [y|n]: " ENABLE_TIMERS
+    done
+
+    if [[ ! ${ENABLE_TIMERS} =~ [Yy] ]]; then
+        echo "> Timers not enabled"
+        return 0
     fi
 
-    echo -n "> Creating hourly cronjob at ${CRON_FILE} ... "
-    sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+rx,o+x resources/scripts/restic-backup ${CRON_FILE}
-    echo "DONE"
+    echo -n "> "
+    sudo systemctl enable --now restic-backup.timer
+    
+    echo -n "> "
+    sudo systemctl enable --now restic-prune.timer
 }
 
 ## OPTION / PARAMATER PARSING
 ########################################
 
-eval set -- "$(getopt -n "${0}" -o hibmlgcj -l "help,install,bash-completion,man-files,lists,group,configure,jobs" -- "$@")"
+eval set -- "$(getopt -n "${0}" -o hibmlgcs -l "help,install,bash-completion,man-files,lists,group,configure,services" -- "$@")"
 
 while true; do
     case "${1}" in
@@ -278,7 +300,7 @@ while true; do
         -l|--lists)           installIncludesList && installExcludesList; exit ;;
         -g|--group)           createResticGroup; exit ;;
         -c|--configure)       configureRestic; exit ;;
-        -j|--jobs)            createJobs; exit ;;
+        -s|--services)        createServices; exit ;;
         --)                   shift; break ;;
     esac
 done
@@ -293,4 +315,4 @@ installResticBinary \
     && configureRestic \
     && installIncludesList \
     && installExcludesList \
-    && createJobs
+    && createServices

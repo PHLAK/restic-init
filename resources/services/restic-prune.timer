@@ -1,0 +1,11 @@
+[Unit]
+Description=Run restic-prune.service
+
+[Install]
+WantedBy=timers.target
+
+[Timer]
+OnCalendar=weekly
+AccuracySec=1hour
+RandomizedDelaySec=5days
+Persistent=true

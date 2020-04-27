@@ -1,0 +1,11 @@
+[Unit]
+Description=Prune the repository
+Conflicts=restic-backup.service
+# Requisite=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/restic/config
+ExecStartPre=restic unlock
+ExecStart=restic prune
+ExecStartPost=restic check
