@@ -242,7 +242,7 @@ function installExcludesList() {
     echo "DONE"
 }
 
-function createServices() { # TODO: Convert this to systemd services and scheduled tasks
+function createServices() {
     requireRoot
 
     for FILE in resources/services/*.{service,timer}; do
