@@ -7,5 +7,5 @@ WantedBy=timers.target
 [Timer]
 OnCalendar=weekly
 AccuracySec=1hour
-RandomizedDelaySec=5days
+RandomizedDelaySec=12hours
 Persistent=true
