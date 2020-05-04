@@ -291,7 +291,7 @@ function createServices() {
 
 eval set -- "$(getopt -n "${0}" -o hibmlgcs -l "help,install,bash-completion,man-files,lists,group,configure,services" -- "$@")"
 
-while true; do
+while [[ $# -gt 0 ]]; do
     case "${1}" in
         -h|--help)            usageLong; exit ;;
         -i|--install)         installResticBinary; exit ;;
