@@ -11,14 +11,9 @@ RESTIC_CONFIG_DIRECTORY="/etc/restic"
 ## SCRIPT USAGE
 ########################################
 
-function usageShort() {
-    echo "Usage: $(basename ${0}) [OPTIONS]"
-}
-
-function usageLong() {
-    usageShort
-
+function usage() {
 	cat <<-EOF
+		Usage: $(basename ${0}) [OPTIONS]
 
 	    OPTIONS:
 
@@ -293,7 +288,7 @@ eval set -- "$(getopt -n "${0}" -o hibmlgcs -l "help,install,bash-completion,man
 
 while [[ $# -gt 0 ]]; do
     case "${1}" in
-        -h|--help)            usageLong; exit ;;
+        -h|--help)            usage; exit ;;
         -i|--install)         installResticBinary; exit ;;
         -b|--bash-completion) installBashCompletion; exit ;;
         -m|--man-files)       installManFiles; exit ;;
