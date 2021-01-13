@@ -7,6 +7,7 @@ set -o errexit -o pipefail
 RESTIC_BIN="/usr/local/bin/restic"
 RESTIC_GROUP="restic"
 RESTIC_CONFIG_DIRECTORY="/etc/restic"
+RESTIC_CONFIG_FILE="${RESTIC_CONFIG_DIRECTORY}/config"
 
 ## SCRIPT USAGE
 ########################################
@@ -18,7 +19,9 @@ function usage() {
 	    OPTIONS:
 
 	        -h, --help             Print this help dialogue
+	        -c, --check-deps       Check the system for required dependencies
 	        -i, --install          Install the Restic binary
+	        -r, --repository       Initialize the Restic repository
 	        -b, --bash-completion  Install bash completion scripts
 	        -m, --man-files        Install Restic man files
 	        -l, --lists            Install includes and excludes lists
@@ -31,6 +34,25 @@ function usage() {
 
 ## SCRIPT FUNCTIONS
 ########################################
+
+function checkForMissingDependencies() {
+    local DEPENDENCIES=('bzip2' 'ca-certificates' 'curl' 'jq' 'sudo' 'systemd')
+    local MISSING_DEPENDENCIES=()
+
+    echo "> Checking for missing dependencies..."
+    for DEPENDENCY in "${DEPENDENCIES[@]}"; do
+        if ! dpkg -l "${DEPENDENCY}" &> /dev/null; then
+            MISSING_DEPENDENCIES+=(${DEPENDENCY})
+        fi
+    done
+
+    if [[ ! -z ${MISSING_DEPENDENCIES[@]} ]]; then
+        echo "ERROR: One or more dependencies were not found (${MISSING_DEPENDENCIES[@]})"
+        exit 1
+    fi
+
+    echo "> All required dependencies found"
+}
 
 function requireRoot() {
     if [[ $(sudo whoami) != "root" ]]; then
@@ -78,6 +100,9 @@ function installBashCompletion() {
     fi
 
     echo -n "> "
+    sudo mkdir --parents --verbose /etc/bash_completion.d
+
+    echo -n "> "
     sudo restic generate --bash-completion /etc/bash_completion.d/restic
 }
 
@@ -113,13 +138,13 @@ function createResticGroup() {
         return 0
     fi
 
-    sudo addgroup ${RESTIC_GROUP}
+    echo -n "> Creating group 'restic' ... "
+    sudo addgroup ${RESTIC_GROUP} > /dev/null
+    echo "DONE"
 }
 
 function configureRestic() {
     requireRoot
-
-    local CONFIG_FILE="${RESTIC_CONFIG_DIRECTORY}/config"
 
     if [[ ! -d ${RESTIC_CONFIG_DIRECTORY} ]]; then
         echo "> Creating restic config directory at ${RESTIC_CONFIG_DIRECTORY}"
@@ -128,19 +153,19 @@ function configureRestic() {
 
     echo "> Gathering configuration data from user"
 
-    if [[ -f ${CONFIG_FILE} ]]; then
+    if [[ -f ${RESTIC_CONFIG_FILE} ]]; then
         while [[ ! ${OVERWRITE_CONFIG_FILE} =~ [nyNY] ]]; do
             read -p "Configuration file already exists, overwrite? [y|n]: " OVERWRITE_CONFIG_FILE
         done
 
         if [[ ! ${OVERWRITE_CONFIG_FILE} =~ [Yy] ]]; then
-            echo "> Keeping previously created confuration file ${CONFIG_FILE}"
+            echo "> Keeping previously created confuration file ${RESTIC_CONFIG_FILE}"
             return 0
         fi
     fi
 
     while [[ ! ${RESTIC_REPOSITORY} =~ [a-zA-Z_-]+ ]]; do
-        read -p "Repository name: " RESTIC_REPOSITORY
+        read -p "Repository: " RESTIC_REPOSITORY
     done
 
     echo "NOTE: Password must be at least 10 characters"
@@ -180,7 +205,7 @@ function configureRestic() {
         read -p "Yearly backups (default: 1): " KEEP_YEARLY
     done
 
-    echo -n "> Writing config file ${CONFIG_FILE} ... "
+    echo -n "> Writing config file ${RESTIC_CONFIG_FILE} ... "
     cat resources/config \
         | sed "s|{{ RESTIC_REPOSITORY }}|${RESTIC_REPOSITORY}|" \
         | sed "s|{{ RESTIC_PASSWORD }}|${RESTIC_PASSWORD}|" \
@@ -191,7 +216,29 @@ function configureRestic() {
         | sed "s|{{ KEEP_WEEKLY }}|${KEEP_WEEKLY}|" \
         | sed "s|{{ KEEP_MONTHLY }}|${KEEP_MONTHLY}|" \
         | sed "s|{{ KEEP_YEARLY }}|${KEEP_YEARLY}|" \
-        | sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+r /dev/stdin ${CONFIG_FILE}
+        | sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+r /dev/stdin ${RESTIC_CONFIG_FILE}
+    echo "DONE"
+}
+
+function initializeRepository() {
+    export $(sudo grep -v '^#' ${RESTIC_CONFIG_FILE} | xargs)
+
+    if restic --no-cache --repo ${RESTIC_REPOSITORY} snapshots &> /dev/null; then
+        echo "> Respository already intialized at ${RESTIC_REPOSITORY}"
+        return 0
+    fi
+
+    while [[ ! ${INITIALIZE_REPO} =~ [nyNY]  ]]; do
+        read -p "Repository is not initilized, initialize now? [y|n]: " INITIALIZE_REPO
+    done
+
+    if [[ ! ${INITIALIZE_REPO} =~ [Yy] ]]; then
+        echo "> Skipping repository initilization"
+        return 0
+    fi
+
+    echo -n "> Initializaing repository at ${RESTIC_REPOSITORY} ... "
+    restic init --repo ${RESTIC_REPOSITORY} > /dev/null
     echo "DONE"
 }
 
@@ -276,7 +323,7 @@ function createServices() {
 
     echo -n "> "
     sudo systemctl enable --now restic-backup.timer
-    
+
     echo -n "> "
     sudo systemctl enable --now restic-prune.timer
 }
@@ -284,12 +331,14 @@ function createServices() {
 ## OPTION / PARAMATER PARSING
 ########################################
 
-eval set -- "$(getopt -n "${0}" -o hibmlgcs -l "help,install,bash-completion,man-files,lists,group,configure,services" -- "$@")"
+eval set -- "$(getopt -n "${0}" -o hcirbmlgcs -l "help,check-deps,install,repository,bash-completion,man-files,lists,group,configure,services" -- "$@")"
 
 while [[ $# -gt 0 ]]; do
     case "${1}" in
         -h|--help)            usage; exit ;;
+        -c|--check-deps)      checkForMissingDependencies; exit ;;
         -i|--install)         installResticBinary; exit ;;
+        -r|--repository)      initializeRepository; exit ;;
         -b|--bash-completion) installBashCompletion; exit ;;
         -m|--man-files)       installManFiles; exit ;;
         -l|--lists)           installIncludesList && installExcludesList; exit ;;
@@ -303,11 +352,14 @@ done
 ## MAIN
 ########################################
 
+checkForMissingDependencies
+
 installResticBinary \
     && installBashCompletion \
     && installManFiles \
     && createResticGroup \
     && configureRestic \
+    && initializeRepository \
     && installIncludesList \
     && installExcludesList \
     && createServices
