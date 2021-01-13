@@ -5,7 +5,6 @@ Description=Run restic-prune.service
 WantedBy=timers.target
 
 [Timer]
-OnCalendar=weekly
-AccuracySec=1hour
+OnCalendar=*-*-* 06:00:00
 RandomizedDelaySec=12hours
 Persistent=true
