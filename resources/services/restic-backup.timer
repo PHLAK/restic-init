@@ -6,5 +6,5 @@ WantedBy=timers.target
 
 [Timer]
 OnCalendar=hourly
-RandomizedDelaySec=15min
+RandomizedDelaySec=5min
 Persistent=true

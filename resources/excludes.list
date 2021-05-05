@@ -22,6 +22,7 @@
 /home/*/.adobe
 /home/*/.bash_history
 /home/*/.cache
+/home/*/.cargo
 /home/*/.composer
 /home/*/.dbus
 /home/*/.gem
@@ -51,6 +52,7 @@
 /**/Cache
 /**/CACHE
 /**/CachedData
+/**/CacheStorage
 /**/GPUCache
 *.cache
 

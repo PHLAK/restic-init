@@ -2,7 +2,7 @@
 Description=Prune the repository
 Before=restic-backup.service
 Conflicts=restic-backup.service
-# Requisite=network-online.target
+Requisite=network-online.target
 
 [Service]
 Type=oneshot

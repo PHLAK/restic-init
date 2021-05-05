@@ -5,9 +5,14 @@ set -o errexit -o pipefail
 ########################################
 
 RESTIC_BIN="/usr/local/bin/restic"
-RESTIC_GROUP="restic"
+RESTIC_CACHE_DIR="/var/cache/restic"
 RESTIC_CONFIG_DIRECTORY="/etc/restic"
 RESTIC_CONFIG_FILE="${RESTIC_CONFIG_DIRECTORY}/config"
+
+## COLOR VARIABLES
+########################################
+
+OUTPUT_INDICATOR="$(tput setaf 4)>>>$(tput sgr0)"
 
 ## SCRIPT USAGE
 ########################################
@@ -22,10 +27,7 @@ function usage() {
 	        -c, --check-deps       Check the system for required dependencies
 	        -i, --install          Install the Restic binary
 	        -r, --repository       Initialize the Restic repository
-	        -b, --bash-completion  Install bash completion scripts
-	        -m, --man-files        Install Restic man files
 	        -l, --lists            Install includes and excludes lists
-	        -g, --group            Create the "restic" group
 	        -c, --configure        Run interactive configuration
 	        -s, --services         Install systemd services and timers
 
@@ -39,9 +41,9 @@ function checkForMissingDependencies() {
     local DEPENDENCIES=('bzip2' 'ca-certificates' 'curl' 'jq' 'sudo' 'systemd')
     local MISSING_DEPENDENCIES=()
 
-    echo "> Checking for missing dependencies..."
+    echo "${OUTPUT_INDICATOR} Checking for missing dependencies..."
     for DEPENDENCY in "${DEPENDENCIES[@]}"; do
-        if ! dpkg -l "${DEPENDENCY}" &> /dev/null; then
+        if ! pacman --query "${DEPENDENCY}" &> /dev/null; then
             MISSING_DEPENDENCIES+=(${DEPENDENCY})
         fi
     done
@@ -51,7 +53,7 @@ function checkForMissingDependencies() {
         exit 1
     fi
 
-    echo "> All required dependencies found"
+    echo "${OUTPUT_INDICATOR} All required dependencies found"
 }
 
 function requireRoot() {
@@ -65,93 +67,30 @@ function installResticBinary() {
     requireRoot
 
     if [[ ! $(command -v restic) ]]; then
-        local RESTIC_VERSION="$(curl -s https://api.github.com/repos/restic/restic/releases/latest | jq --raw-output '.tag_name')"
-        local ARCHIVE_URL="https://github.com/restic/restic/releases/download/${RESTIC_VERSION}/restic_${RESTIC_VERSION#v}_linux_amd64.bz2"
-
-        echo -n "> Installing restic ... "
-        curl --silent --location ${ARCHIVE_URL} | bzip2 --decompress \
-            | sudo tee ${RESTIC_BIN} > /dev/null && sudo chmod +x  ${RESTIC_BIN}
+        echo -n "${OUTPUT_INDICATOR} Installing restic ... "
+        sudo pacman --sync --noconfirm restic > /dev/null
         echo "DONE"
 
         return 0
     else
-        echo "> Restic already installed at $(command -v restic)"
+        echo "${OUTPUT_INDICATOR} Restic already installed at $(command -v restic)"
     fi
-
-    echo -n "> Checking for newer version ... "
-    sudo restic self-update > /dev/null
-    echo "DONE"
-}
-
-function installBashCompletion() {
-    requireRoot
-
-    local BASH_COMPLETION_FILE="/etc/bash_completion.d/restic"
-
-    if [[ -f ${BASH_COMPLETION_FILE} ]]; then
-        while [[ ! ${OVERWRITE_BASH_COMPLETION_FILE} =~ [nyNY] ]]; do
-            read -p "Bash completion file already exists, overwrite? [y|n]: " OVERWRITE_BASH_COMPLETION_FILE
-        done
-
-        if [[ ! ${OVERWRITE_BASH_COMPLETION_FILE} =~ [Yy] ]]; then
-            echo "> Keeping previously created bash completion file ${BASH_COMPLETION_FILE}"
-            return 0
-        fi
-    fi
-
-    echo -n "> "
-    sudo mkdir --parents --verbose /etc/bash_completion.d
-
-    echo -n "> "
-    sudo restic generate --bash-completion /etc/bash_completion.d/restic
-}
-
-function installManFiles() {
-    requireRoot
-
-    local MAN_FILES_PATH="/usr/share/man/man1"
-
-    if [[ $(compgen -G "${MAN_FILES_PATH}/restic*.1") ]]; then
-        while [[ ! ${OVERWRITE_MAN_FILES} =~ [nyNY] ]]; do
-            read -p "Some man files already exist, overwrite? [y|n]: " OVERWRITE_MAN_FILES
-        done
-
-        if [[ ! ${OVERWRITE_MAN_FILES} =~ [Yy] ]]; then
-            echo "> Keeping previously created man files in ${MAN_FILES_PATH}"
-            return 0
-        else
-            echo -n "> Removing existing man files ... "
-            sudo rm ${MAN_FILES_PATH}/restic*.1
-            echo "DONE"
-        fi
-    fi
-
-    echo -n "> "
-    sudo restic generate --man ${MAN_FILES_PATH}
-}
-
-function createResticGroup() {
-    requireRoot
-
-    if [[ $(getent group ${RESTIC_GROUP}) ]]; then
-        echo "> Group '${RESTIC_GROUP}' already exists"
-        return 0
-    fi
-
-    echo -n "> Creating group 'restic' ... "
-    sudo addgroup ${RESTIC_GROUP} > /dev/null
-    echo "DONE"
 }
 
 function configureRestic() {
     requireRoot
 
+    if [[ ! -d ${RESTIC_CACHE_DIR} ]]; then
+        echo "${OUTPUT_INDICATOR} Creating restic cache directory at ${RESTIC_CACHE_DIR}"
+        sudo mkdir ${RESTIC_CACHE_DIR}
+    fi
+
     if [[ ! -d ${RESTIC_CONFIG_DIRECTORY} ]]; then
-        echo "> Creating restic config directory at ${RESTIC_CONFIG_DIRECTORY}"
+        echo "${OUTPUT_INDICATOR} Creating restic config directory at ${RESTIC_CONFIG_DIRECTORY}"
         sudo mkdir ${RESTIC_CONFIG_DIRECTORY}
     fi
 
-    echo "> Gathering configuration data from user"
+    echo "${OUTPUT_INDICATOR} Gathering configuration data from user"
 
     if [[ -f ${RESTIC_CONFIG_FILE} ]]; then
         while [[ ! ${OVERWRITE_CONFIG_FILE} =~ [nyNY] ]]; do
@@ -159,7 +98,7 @@ function configureRestic() {
         done
 
         if [[ ! ${OVERWRITE_CONFIG_FILE} =~ [Yy] ]]; then
-            echo "> Keeping previously created confuration file ${RESTIC_CONFIG_FILE}"
+            echo "${OUTPUT_INDICATOR} Keeping previously created confuration file ${RESTIC_CONFIG_FILE}"
             return 0
         fi
     fi
@@ -183,7 +122,7 @@ function configureRestic() {
         done
     fi
 
-    echo "> Gathering backup retention data from user"
+    echo "${OUTPUT_INDICATOR} Gathering backup retention data from user"
 
     while [[ ! ${KEEP_HOURLY} =~ [0-9]+ ]]; do
         read -p "Hourly backups (default: 24): " KEEP_HOURLY
@@ -205,8 +144,9 @@ function configureRestic() {
         read -p "Yearly backups (default: 1): " KEEP_YEARLY
     done
 
-    echo -n "> Writing config file ${RESTIC_CONFIG_FILE} ... "
+    echo -n "${OUTPUT_INDICATOR} Writing config file ${RESTIC_CONFIG_FILE} ... "
     cat resources/config \
+        | sed "s|{{ RESTIC_CACHE_DIR }}|${RESTIC_CACHE_DIR}|" \
         | sed "s|{{ RESTIC_REPOSITORY }}|${RESTIC_REPOSITORY}|" \
         | sed "s|{{ RESTIC_PASSWORD }}|${RESTIC_PASSWORD}|" \
         | sed "s|{{ B2_ACCOUNT_ID }}|${B2_ACCOUNT_ID}|" \
@@ -216,7 +156,7 @@ function configureRestic() {
         | sed "s|{{ KEEP_WEEKLY }}|${KEEP_WEEKLY}|" \
         | sed "s|{{ KEEP_MONTHLY }}|${KEEP_MONTHLY}|" \
         | sed "s|{{ KEEP_YEARLY }}|${KEEP_YEARLY}|" \
-        | sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+r /dev/stdin ${RESTIC_CONFIG_FILE}
+        | sudo install --owner root --group root --mode u+rw /dev/stdin ${RESTIC_CONFIG_FILE}
     echo "DONE"
 }
 
@@ -224,7 +164,7 @@ function initializeRepository() {
     export $(sudo grep -v '^#' ${RESTIC_CONFIG_FILE} | xargs)
 
     if restic --no-cache --repo ${RESTIC_REPOSITORY} snapshots &> /dev/null; then
-        echo "> Respository already intialized at ${RESTIC_REPOSITORY}"
+        echo "${OUTPUT_INDICATOR} Respository already intialized at ${RESTIC_REPOSITORY}"
         return 0
     fi
 
@@ -233,11 +173,11 @@ function initializeRepository() {
     done
 
     if [[ ! ${INITIALIZE_REPO} =~ [Yy] ]]; then
-        echo "> Skipping repository initilization"
+        echo "${OUTPUT_INDICATOR} Skipping repository initilization"
         return 0
     fi
 
-    echo -n "> Initializaing repository at ${RESTIC_REPOSITORY} ... "
+    echo -n "${OUTPUT_INDICATOR} Initializaing repository at ${RESTIC_REPOSITORY} ... "
     restic init --repo ${RESTIC_REPOSITORY} > /dev/null
     echo "DONE"
 }
@@ -253,12 +193,12 @@ function installIncludesList() {
         done
 
         if [[ ! ${OVERWRITE_INCLUDES_LIST} =~ [Yy] ]]; then
-            echo "> Keeping previously created includes list ${INCLUDES_LIST}"
+            echo "${OUTPUT_INDICATOR} Keeping previously created includes list ${INCLUDES_LIST}"
             return 0
         fi
     fi
 
-    echo -n "> Creating includes list at ${INCLUDES_LIST} ... "
+    echo -n "${OUTPUT_INDICATOR} Creating includes list at ${INCLUDES_LIST} ... "
     sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+r resources/includes.list ${INCLUDES_LIST}
     echo "DONE"
 }
@@ -274,12 +214,12 @@ function installExcludesList() {
         done
 
         if [[ ! ${OVERWRITE_EXCLUDES_LIST} =~ [Yy] ]]; then
-            echo "> Keeping previously created excludes list ${EXCLUDES_LIST}"
+            echo "${OUTPUT_INDICATOR} Keeping previously created excludes list ${EXCLUDES_LIST}"
             return 0
         fi
     fi
 
-    echo -n "> Creating excludes list at ${EXCLUDES_LIST} ... "
+    echo -n "${OUTPUT_INDICATOR} Creating excludes list at ${EXCLUDES_LIST} ... "
     sudo install --owner root --group ${RESTIC_GROUP} --mode u+rw,g+r resources/excludes.list ${EXCLUDES_LIST}
     echo "DONE"
 }
@@ -296,19 +236,19 @@ function createServices() {
             done
 
             if [[ ! ${OVERWRITE_FILE} =~ [Yy] ]]; then
-                echo "> Keeping previously created service file ${DESTINATION}"
+                echo "${OUTPUT_INDICATOR} Keeping previously created service file ${DESTINATION}"
                 unset OVERWRITE_FILE
                 continue
             fi
         fi
 
-        echo -n "> Creating service file at ${DESTINATION} ... "
+        echo -n "${OUTPUT_INDICATOR} Creating service file at ${DESTINATION} ... "
         sudo install --owner root --group root ${FILE} ${DESTINATION}
         unset OVERWRITE_FILE
         echo "DONE"
     done
 
-    echo -n "> Reloading systemd daemon ... "
+    echo -n "${OUTPUT_INDICATOR} Reloading systemd daemon ... "
     sudo systemctl daemon-reload
     echo "DONE"
 
@@ -316,22 +256,24 @@ function createServices() {
         read -p "Enable backup timers? [y|n]: " ENABLE_TIMERS
     done
 
+    # Run first backup?
+
     if [[ ! ${ENABLE_TIMERS} =~ [Yy] ]]; then
-        echo "> Timers not enabled"
+        echo "${OUTPUT_INDICATOR} Timers not enabled"
         return 0
     fi
 
-    echo -n "> "
+    echo -n "${OUTPUT_INDICATOR} "
     sudo systemctl enable --now restic-backup.timer
 
-    echo -n "> "
+    echo -n "${OUTPUT_INDICATOR} "
     sudo systemctl enable --now restic-prune.timer
 }
 
 ## OPTION / PARAMATER PARSING
 ########################################
 
-eval set -- "$(getopt -n "${0}" -o hcirbmlgcs -l "help,check-deps,install,repository,bash-completion,man-files,lists,group,configure,services" -- "$@")"
+eval set -- "$(getopt -n "${0}" -o hcirlcs -l "help,check-deps,install,repository,lists,configure,services" -- "$@")"
 
 while [[ $# -gt 0 ]]; do
     case "${1}" in
@@ -339,10 +281,7 @@ while [[ $# -gt 0 ]]; do
         -c|--check-deps)      checkForMissingDependencies; exit ;;
         -i|--install)         installResticBinary; exit ;;
         -r|--repository)      initializeRepository; exit ;;
-        -b|--bash-completion) installBashCompletion; exit ;;
-        -m|--man-files)       installManFiles; exit ;;
         -l|--lists)           installIncludesList && installExcludesList; exit ;;
-        -g|--group)           createResticGroup; exit ;;
         -c|--configure)       configureRestic; exit ;;
         -s|--services)        createServices; exit ;;
         --)                   shift; break ;;
@@ -355,9 +294,6 @@ done
 checkForMissingDependencies
 
 installResticBinary \
-    && installBashCompletion \
-    && installManFiles \
-    && createResticGroup \
     && configureRestic \
     && initializeRepository \
     && installIncludesList \
