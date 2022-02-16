@@ -5,6 +5,6 @@ Description=Run restic-backup.service
 WantedBy=timers.target
 
 [Timer]
-OnCalendar=hourly
-RandomizedDelaySec=5min
-Persistent=true
+OnBootSec=5min
+OnUnitInactiveSec=1h
+RandomizedDelaySec=10min
