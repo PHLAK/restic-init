@@ -124,24 +124,28 @@ function configureRestic() {
 
     echo "${OUTPUT_INDICATOR} Gathering backup retention data from user"
 
+    while [[ ! ${KEEP_LAST} =~ [0-9]+ ]]; do
+        read -p "Latest backups: " KEEP_HOURLY
+    done
+
     while [[ ! ${KEEP_HOURLY} =~ [0-9]+ ]]; do
-        read -p "Hourly backups (default: 24): " KEEP_HOURLY
+        read -p "Hourly backups: " KEEP_HOURLY
     done
 
     while [[ ! ${KEEP_DAILY} =~ [0-9]+ ]]; do
-        read -p "Daily backups (default: 7): " KEEP_DAILY
+        read -p "Daily backups: " KEEP_DAILY
     done
 
     while [[ ! ${KEEP_WEEKLY} =~ [0-9]+ ]]; do
-        read -p "Weekly backups (default: 4): " KEEP_WEEKLY
+        read -p "Weekly backups: " KEEP_WEEKLY
     done
 
     while [[ ! ${KEEP_MONTHLY} =~ [0-9]+ ]]; do
-        read -p "Monthly backups (default: 12): " KEEP_MONTHLY
+        read -p "Monthly backups: " KEEP_MONTHLY
     done
 
     while [[ ! ${KEEP_YEARLY} =~ [0-9]+ ]]; do
-        read -p "Yearly backups (default: 1): " KEEP_YEARLY
+        read -p "Yearly backups: " KEEP_YEARLY
     done
 
     echo -n "${OUTPUT_INDICATOR} Writing config file ${RESTIC_CONFIG_FILE} ... "
