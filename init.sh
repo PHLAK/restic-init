@@ -13,6 +13,7 @@ RESTIC_CONFIG_FILE="${RESTIC_CONFIG_DIRECTORY}/config"
 ########################################
 
 OUTPUT_INDICATOR="$(tput setaf 4)>>>$(tput sgr0)"
+NOTE="$(tput setab 6)$(tput setaf 0) NOTE $(tput sgr0)"
 
 ## SCRIPT USAGE
 ########################################
@@ -102,6 +103,8 @@ function configureRestic() {
             return 0
         fi
     fi
+
+    echo "${OUTPUT_INDICATOR} ${NOTE} Prefix repository with 'b2:' for a B2 bucket"
 
     while [[ ! ${RESTIC_REPOSITORY} =~ [a-zA-Z_-]+ ]]; do
         read -p "Repository: " RESTIC_REPOSITORY
