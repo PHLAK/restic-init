@@ -12,7 +12,6 @@
 /sys
 /tmp
 /usr/bin
-/var/lib/docker
 /var/log
 /var/tmp
 

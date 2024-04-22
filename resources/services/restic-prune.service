@@ -3,11 +3,12 @@ Description=Prune the repository
 Before=restic-backup.service
 Conflicts=restic-backup.service
 Requisite=network-online.target
+ConditionACPower=true
 
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/restic/config
 ExecStartPre=restic unlock
-ExecStart=restic prune
-ExecStartPost=restic check
+ExecStart=restic prune --verbose
+ExecStartPost=restic check --verbose
 Nice=19
