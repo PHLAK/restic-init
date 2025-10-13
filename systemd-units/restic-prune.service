@@ -7,7 +7,7 @@ ConditionACPower=true
 
 [Service]
 Type=oneshot
-EnvironmentFile=/etc/restic/config
+EnvironmentFile=/etc/restic/config.env
 ExecStartPre=restic unlock
 ExecStart=restic prune --verbose
 ExecStartPost=restic check --verbose

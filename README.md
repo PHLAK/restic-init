@@ -4,15 +4,14 @@ Restic Init
 ## Requirements
 
   - [Arch Linux](https://archlinux.org)
+  - [Restic](https://restic.net)
 
 ### Getting started
 
-Run `init.sh` and follow the prompts.
+  1. Run `make init`
+  2. Edit `/etc/restic/config.env`
+  3. Start the systemd timers
 
-## Restoring Data
-
-    # export $(grep -v "^#" /etc/restic/config | xargs)
-    # restic mount <mount_path>
-
-View the [Restic documentation](https://restic.readthedocs.io/en/stable/050_restore.html)
-for additional instructions on restoring your data.
+     ```
+     systemctl enable --now restic-backup.timer restic-prune.timer
+     ```

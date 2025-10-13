@@ -4,15 +4,19 @@
 /bin
 /boot
 /dev
+/lost+found
 /media
 /mnt
 /proc
 /run
 /snap
+/swapfile
 /sys
 /tmp
 /usr/bin
-/var/log
+/var/cache
+/var/lock
+/var/run
 /var/tmp
 
 # User Files
@@ -54,6 +58,11 @@
 /**/CacheStorage
 /**/GPUCache
 *.cache
+
+# Trash Files
+########################################
+
+/home/*/.local/share/Trash
 
 # Development Files
 ########################################
