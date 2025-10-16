@@ -7,7 +7,7 @@ check-dependencies check-deps: # Check for installed dependencies
 
 configuration config: # Install configuration files
 	@mkdir --parents --verbose /etc/restic
-	@install --backup --verbose configuration/* /etc/restic
+	@install --backup --mode u+rw configuration/* --verbose /etc/restic
 
 systemd-units units: # Install systemd unit files
-	@install --backup --verbose systemd-units/*.{service,timer} /etc/systemd/system/
+	@install ---mode u+rw,go+r systemd-units/*.{service,timer} -verbose /etc/systemd/system/
